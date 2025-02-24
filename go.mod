@@ -1,6 +1,6 @@
 module url-shortener
 
-go 1.20
+go 1.23.4
 
 require (
 	github.com/brianvoe/gofakeit/v6 v6.22.0
@@ -10,7 +10,7 @@ require (
 	github.com/go-chi/render v1.0.2
 	github.com/go-playground/validator/v10 v10.14.1
 	github.com/ilyakaznacheev/cleanenv v1.4.2
-	github.com/mattn/go-sqlite3 v1.14.17
+	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 )
@@ -33,7 +33,7 @@ require (
 	github.com/klauspost/compress v1.15.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.17 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sanity-io/litter v1.5.5 // indirect
@@ -49,7 +49,7 @@ require (
 	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/net v0.8.0 // indirect
-	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect

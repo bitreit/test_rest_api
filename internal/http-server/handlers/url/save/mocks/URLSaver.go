@@ -33,6 +33,30 @@ func (_m *URLSaver) SaveURL(urlToSave string, alias string) (int64, error) {
 	return r0, r1
 }
 
+// SearchAlias provides a mock function with given fields: alias
+func (_m *URLSaver) SearchAlias(alias string) (bool, error) {
+	ret := _m.Called(alias)
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (bool, error)); ok {
+		return rf(alias)
+	}
+	if rf, ok := ret.Get(0).(func(string) bool); ok {
+		r0 = rf(alias)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(alias)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 type mockConstructorTestingTNewURLSaver interface {
 	mock.TestingT
 	Cleanup(func())

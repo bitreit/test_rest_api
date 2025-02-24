@@ -1,17 +1,11 @@
 package main
 
 import (
-	"context"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"golang.org/x/exp/slog"
-
+	"net/http"
+	"os"
 	"url-shortener/internal/config"
 	"url-shortener/internal/http-server/handlers/redirect"
 	"url-shortener/internal/http-server/handlers/url/save"
@@ -53,21 +47,11 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	router.Route("/url", func(r chi.Router) {
-		r.Use(middleware.BasicAuth("url-shortener", map[string]string{
-			cfg.HTTPServer.User: cfg.HTTPServer.Password,
-		}))
-
-		r.Post("/", save.New(log, storage))
-		// TODO: add DELETE /url/{id}
-	})
-
+	router.Post("/url", save.New(log, storage))
+	router.Delete("/del", delete_sql.DeleteCase(log, storage))
 	router.Get("/{alias}", redirect.New(log, storage))
 
-	log.Info("starting server", slog.String("address", cfg.Address))
-
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	log.Info("starting http server", slog.String("address", cfg.Address))
 
 	srv := &http.Server{
 		Addr:         cfg.Address,
@@ -76,31 +60,9 @@ func main() {
 		WriteTimeout: cfg.HTTPServer.Timeout,
 		IdleTimeout:  cfg.HTTPServer.IdleTimeout,
 	}
-
-	go func() {
-		if err := srv.ListenAndServe(); err != nil {
-			log.Error("failed to start server")
-		}
-	}()
-
-	log.Info("server started")
-
-	<-done
-	log.Info("stopping server")
-
-	// TODO: move timeout to config
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Error("failed to stop server", sl.Err(err))
-
-		return
+	if err := srv.ListenAndServe(); err != nil {
+		log.Error("failed to start http server", sl.Err(err))
 	}
-
-	// TODO: close storage
-
-	log.Info("server stopped")
 }
 
 func setupLogger(env string) *slog.Logger {

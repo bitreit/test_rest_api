@@ -4,9 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-
 	"github.com/mattn/go-sqlite3"
-
 	"url-shortener/internal/storage"
 )
 
@@ -40,7 +38,6 @@ func New(storagePath string) (*Storage, error) {
 
 	return &Storage{db: db}, nil
 }
-
 func (s *Storage) SaveURL(urlToSave string, alias string) (int64, error) {
 	const op = "storage.sqlite.SaveURL"
 
@@ -51,7 +48,8 @@ func (s *Storage) SaveURL(urlToSave string, alias string) (int64, error) {
 
 	res, err := stmt.Exec(urlToSave, alias)
 	if err != nil {
-		if sqliteErr, ok := err.(sqlite3.Error); ok && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+		var sqliteErr sqlite3.Error
+		if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
 			return 0, fmt.Errorf("%s: %w", op, storage.ErrURLExists)
 		}
 
@@ -86,6 +84,38 @@ func (s *Storage) GetURL(alias string) (string, error) {
 	}
 
 	return resURL, nil
+}
+
+func (s *Storage) SearchAlias(alias string) (bool, error) {
+	const op = "storage.sqlite.searchAlias"
+
+	// Подготовка SQL-запроса
+	stmt, err := s.db.Prepare("SELECT COUNT(*) FROM storage WHERE alias = ?")
+	if err != nil {
+		return true, fmt.Errorf("%s: prepare statement: %w", op, err)
+	}
+
+	var count int
+	err = stmt.QueryRow(alias).Scan(&count)
+	if err != nil {
+		return true, fmt.Errorf("%s: ошибка выполнения запроса: %w", op, err)
+	}
+
+	return count == 0, nil
+}
+
+func (s *Storage) DeleteURL(alias string, urlToDelete string) error {
+	const op = "storage.sqlite.DeleteURL"
+	stmt, err := s.db.Prepare("DELETE FROM url and alias WHERE alias = ? AND url = ?")
+	if err != nil {
+		return fmt.Errorf("%s: prepare statement: %w", op, err)
+	}
+	_, err = stmt.Exec(alias, urlToDelete)
+	if err != nil {
+		return fmt.Errorf("%s: execute statement: %w", op, err)
+	}
+	return nil
+
 }
 
 // TODO: implement method

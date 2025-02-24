@@ -1,19 +1,15 @@
-package save
+package delete
 
 import (
 	"errors"
-	"io"
-	"net/http"
-	"url-shortener/internal/config"
-
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
 	"golang.org/x/exp/slog"
-
+	"io"
+	"net/http"
 	"url-shortener/internal/lib/api/response"
 	"url-shortener/internal/lib/logger/sl"
-	"url-shortener/internal/lib/random"
 	"url-shortener/internal/storage"
 )
 
@@ -27,28 +23,21 @@ type Response struct {
 	Alias string `json:"alias,omitempty"`
 }
 
-// TODO: move to config if needed
-const aliasLength = 10
-
-//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=URLSaver
-type URLSaver interface {
-	SaveURL(urlToSave string, alias string) (int64, error)
-	SearchAlias(alias string) (bool, error)
+type URLdelete interface {
+	DeleteURL(alias string, urlToDelete string) error
 }
 
-func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
+func DeleteCase(log *slog.Logger, handler URLdelete) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		const op = "handlers.url.save.New"
-
+		const op = "handlers.url.delete.New"
 		log := log.With(
 			slog.String("op", op),
-			slog.String("request_id", middleware.GetReqID(r.Context())),
-		)
+			slog.String("request_id", middleware.GetReqID(r.Context())))
 
-		var req Request
+		var del Request
 
-		err := render.DecodeJSON(r.Body, &req)
+		err := render.DecodeJSON(r.Body, &del)
+
 		if errors.Is(err, io.EOF) {
 			// Такую ошибку встретим, если получили запрос с пустым телом.
 			// Обработаем её отдельно
@@ -65,10 +54,9 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 
 			return
 		}
+		log.Info("request body decoded", slog.Any("request", del))
 
-		log.Info("request body decoded", slog.Any("request", req))
-
-		if err := validator.New().Struct(req); err != nil {
+		if err := validator.New().Struct(del); err != nil {
 			validateErr := err.(validator.ValidationErrors)
 
 			log.Error("invalid request", sl.Err(err))
@@ -77,20 +65,9 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 
 			return
 		}
-		cfg := config.MustLoad()
-		alias := req.Alias
-		if alias == "" {
-			alias = random.NewRandomString(cfg.AliasLen)
-			asd, _ := urlSaver.SearchAlias(alias)
-			if asd {
-				alias = random.NewRandomString(cfg.AliasLen)
-			}
-		}
-
-		// TODO: СДЕЛАТЬ ПРОВЕРКУ НА СУЩЕСТВУЮЩИЙ Alias
-		id, err := urlSaver.SaveURL(req.URL, alias)
+		err := handler.DeleteURL(del.Alias, del.URL)
 		if errors.Is(err, storage.ErrURLExists) {
-			log.Info("url already exists", slog.String("url", req.URL))
+			log.Info("url already exists", slog.String("url", del.URL))
 
 			render.JSON(w, r, response.Error("url already exists"))
 
@@ -103,16 +80,13 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 
 			return
 		}
-
 		log.Info("url added", slog.Int64("id", id))
 
-		responseOK(w, r, alias)
+		responseOK(w, r)
 	}
 }
-
-func responseOK(w http.ResponseWriter, r *http.Request, alias string) {
+func responseOK(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, Response{
 		Response: response.OK(),
-		Alias:    alias,
 	})
 }
