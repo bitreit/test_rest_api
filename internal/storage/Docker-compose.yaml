@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+#    container_name: postgres_db
+    environment:
+      POSTGRES_USER: Arslan
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: url
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U Arslan -d url"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  migrate:
+    image: migrate/migrate
+#    container_name: migrate_db
+    volumes:
+      - ./migrations:/migrations
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=url
+      - POSTGRES_USER=Arslan
+      - POSTGRES_PASSWORD=1234
+    command: >
+      sh -c "while ! nc -z postgres 5432; do sleep 1; done &&  
+             migrate -path /migrations -database postgres://Arslan:1234@postgres:5432/url?sslmode=disable up"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:

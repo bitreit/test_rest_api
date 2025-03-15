@@ -8,11 +8,12 @@ import (
 	"os"
 	"url-shortener/internal/config"
 	"url-shortener/internal/http-server/handlers/redirect"
+	delete "url-shortener/internal/http-server/handlers/url/delete_sql"
 	"url-shortener/internal/http-server/handlers/url/save"
 	mwLogger "url-shortener/internal/http-server/middleware/logger"
 	"url-shortener/internal/lib/logger/handlers/slogpretty"
 	"url-shortener/internal/lib/logger/sl"
-	"url-shortener/internal/storage/sqlite"
+	"url-shortener/internal/storage/postgres"
 )
 
 const (
@@ -33,7 +34,7 @@ func main() {
 	)
 	log.Debug("debug messages are enabled")
 
-	storage, err := sqlite.New(cfg.StoragePath)
+	storage, err := postgres.New(cfg.StoragePath)
 	if err != nil {
 		log.Error("failed to init storage", sl.Err(err))
 		os.Exit(1)
@@ -48,7 +49,7 @@ func main() {
 	router.Use(middleware.URLFormat)
 
 	router.Post("/url", save.New(log, storage))
-	router.Delete("/del", delete_sql.DeleteCase(log, storage))
+	router.Delete("/del", delete.DeleteHandler(log, storage))
 	router.Get("/{alias}", redirect.New(log, storage))
 
 	log.Info("starting http server", slog.String("address", cfg.Address))
@@ -63,6 +64,7 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil {
 		log.Error("failed to start http server", sl.Err(err))
 	}
+
 }
 
 func setupLogger(env string) *slog.Logger {
