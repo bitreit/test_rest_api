@@ -1,5 +1,6 @@
 env: "local"
 storage_path: "F:/rest Api/url-shortener/storage/storage.db"
+storage_postgres: "user=Arslan password=1234 dbname=url sslmode=disable host=localhost port=5432"
 http_server:
   address: "0.0.0.0:8082"
   timeout: 4s
